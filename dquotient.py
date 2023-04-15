@@ -19,6 +19,13 @@ class FiniteDifference:
         f(x + b) - f(x + a)
     """
     class FDifferences(typing.NamedTuple):
+        """
+        .. py:attribute:: forward
+
+        .. py:attribute:: backward
+
+        .. py:attribute:: central
+        """
         forward: Decimal
         backward: Decimal
         central: Decimal
@@ -71,6 +78,10 @@ class FiniteDifference:
     @classmethod
     def fdifferences(cls, func: FunctionRV, x: Decimal, h: Decimal) -> FDifferences:
         r"""
+        :param func:
+        :param x:
+        :param h:
+        :return:
         """
         return cls.FDifferences(
             cls.forward(func, x, h),
@@ -85,13 +96,22 @@ class DifferenceQuotient:
 
         {f}^{'}(x) = \lim_{h \to 0} \frac{f(x + h) - f(x)}{h}
     """
+    class NDeriv(typing.NamedTuple):
+        """
+        .. py:attribute:: left
+
+        .. py:attribute:: central
+
+        .. py:attribute:: right
+        """
+        left: Decimal
+        central: Decimal
+        right: Decimal
+
     def __init__(self, func: FunctionRV):
         self.func = func
 
-    def __call__(
-            self, x: Decimal, fdiff: FDiffMethod = FiniteDifference.forward,
-            *, prec: int = 100
-        ) -> Decimal:
+    def nderiv(self, x: Decimal, *, prec: int = 100) -> NDeriv:
         r"""
         :param fdiff:
         :param x:
@@ -101,29 +121,35 @@ class DifferenceQuotient:
         with decimal.localcontext() as ctx:
             ctx.prec = prec + 2
 
-            p, res = 1, Decimal(0)
-            while True:
+            p = 1
+            left, central, right = Decimal(0), Decimal(0), Decimal(0)
+            while p <= prec:
                 h = Decimal(f"1E-{p}")
 
-                if h == 0:
-                    break
+                left = FiniteDifference.backward(self.func, x, h) / h
+                central = FiniteDifference.central(self.func, x, h) / h
+                right = FiniteDifference.forward(self.func, x, h) / h
 
-                res = fdiff(self.func, x, h) / h
+                p *= 2
 
-                p += 1
+            precision = Decimal(f"1E-{prec}")
+            return self.NDeriv(
+                left.quantize(precision),
+                central.quantize(precision),
+                right.quantize(precision)
+            )
 
-            return res.quantize(Decimal(f"1E-{prec}"))
-
-    def derivative(
-            self, fdiff: FDiffMethod = FiniteDifference.forward,
-            *, prec: int = 100
-        ) -> FunctionRV:
+    def derivative(self, *, prec: int = 100) -> typing.Callable[[Decimal], NDeriv]:
         r"""
         :param fdiff:
         :param prec:
         :return:
         """
-        def _derivative(x: Decimal) -> Decimal:
-            return self(x, fdiff, prec=prec)
+        def _derivative(x: Decimal) -> self.NDeriv:
+            r"""
+            :param x:
+            :return:
+            """
+            return self.nderiv(x, prec=prec)
 
         return _derivative
