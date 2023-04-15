@@ -58,3 +58,36 @@ class FiniteDifference:
         :return: The central difference of ``func`` at ``x``
         """
         return func(x + h / 2) - func(x - h / 2)
+
+
+class DifferenceQuotient:
+    """
+    """
+    def __init__(self, func: OneVarFunction):
+        self.func = func
+
+    def __call__(
+            self, x: Decimal, fdiff: FDiffType = FiniteDifference.central,
+            *, prec: int = 100
+        ) -> Decimal:
+        """
+        :param fdiff:
+        :param x:
+        :param prec:
+        :return:
+        """
+        with decimal.localcontext() as ctx:
+            ctx.prec = prec + 2
+
+            p, res = 1, Decimal(0)
+            while True:
+                h = Decimal(f"1E-{p}")
+
+                if h == 0:
+                    break
+
+                res = fdiff(self.func, x, h) / h
+
+                p += 1
+
+            return res.quantize(Decimal(f"1E-{prec}"))
