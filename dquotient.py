@@ -1,4 +1,5 @@
 """
+Computation of finite differences and the difference quotient
 """
 
 import decimal
@@ -12,7 +13,10 @@ FDiffType = typing.Callable[[OneVarFunction, Decimal, Decimal], Decimal]
 
 
 class FiniteDifference:
-    """
+    r"""
+    .. math::
+
+        f(x + b) - f(x + a)
     """
     @staticmethod
     def forward(func: OneVarFunction, x: Decimal, h: Decimal) -> Decimal:
@@ -28,7 +32,7 @@ class FiniteDifference:
         :return: The forward difference of ``func`` at ``x``
         """
         return func(x + h) - func(x)
-    
+
     @staticmethod
     def backward(func: OneVarFunction, x: Decimal, h: Decimal) -> Decimal:
         r"""
@@ -43,7 +47,7 @@ class FiniteDifference:
         :return: The backward difference of ``func`` at ``x``
         """
         return func(x) - func(x - h)
-    
+
     @staticmethod
     def central(func: OneVarFunction, x: Decimal, h: Decimal) -> Decimal:
         r"""
@@ -61,16 +65,19 @@ class FiniteDifference:
 
 
 class DifferenceQuotient:
-    """
+    r"""
+    .. math::
+
+        {f}^{'}(x) = \lim_{h \to 0} \frac{f(x + h) - f(x)}{h}
     """
     def __init__(self, func: OneVarFunction):
         self.func = func
 
     def __call__(
-            self, x: Decimal, fdiff: FDiffType = FiniteDifference.central,
+            self, x: Decimal, fdiff: FDiffType = FiniteDifference.forward,
             *, prec: int = 100
         ) -> Decimal:
-        """
+        r"""
         :param fdiff:
         :param x:
         :param prec:
@@ -91,3 +98,16 @@ class DifferenceQuotient:
                 p += 1
 
             return res.quantize(Decimal(f"1E-{prec}"))
+
+    def derivative(
+            self, fdiff: FDiffType = FiniteDifference.forward, *, prec: int = 100
+        ) -> OneVarFunction:
+        r"""
+        :param fdiff:
+        :param prec:
+        :return:
+        """
+        def _derivative(x: Decimal) -> Decimal:
+            return self(x, fdiff, prec=prec)
+
+        return _derivative
