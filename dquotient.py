@@ -4,11 +4,10 @@ Computation of finite differences and the difference quotient.
 
 import decimal
 from decimal import Decimal
-from numbers import Number
 import typing
 
 
-FunctionRV = typing.Callable[[Number], Number]
+FunctionRV = typing.Callable[[Decimal], Decimal]
 FDiffMethod = typing.Callable[[FunctionRV, Decimal, Decimal], Decimal]
 
 
@@ -31,7 +30,7 @@ class FiniteDifference:
         central: Decimal
 
     @staticmethod
-    def forward(func: FunctionRV, x: Decimal, h: Decimal) -> Decimal:
+    def forward(func: FunctionRV, x: Decimal, h: Decimal, *, prec: int = 100) -> Decimal:
         r"""
         Computes the forward difference of ``func``:
         
@@ -39,14 +38,19 @@ class FiniteDifference:
         
             {\Delta}_{h}[f](x) = f(x + h) - f(x)
             
+        :param func:
         :param x:
         :param h:
+        :param prec:
         :return: The forward difference of ``func`` at ``x``
         """
-        return func(x + h) - func(x)
+        with decimal.localcontext() as ctx:
+            ctx.prec = 2 * prec
+
+            return (func(x + h) - func(x))
 
     @staticmethod
-    def backward(func: FunctionRV, x: Decimal, h: Decimal) -> Decimal:
+    def backward(func: FunctionRV, x: Decimal, h: Decimal, *, prec: int = 100) -> Decimal:
         r"""
         Computes the backward difference of ``func``:
         
@@ -54,14 +58,19 @@ class FiniteDifference:
         
             {\nabla}_{h}[f](x) = f(x) - f(x - h)
             
+        :param func:
         :param x:
         :param h:
+        :param prec:
         :return: The backward difference of ``func`` at ``x``
         """
-        return func(x) - func(x - h)
+        with decimal.localcontext() as ctx:
+            ctx.prec = 2 * prec
+
+            return func(x) - func(x - h)
 
     @staticmethod
-    def central(func: FunctionRV, x: Decimal, h: Decimal) -> Decimal:
+    def central(func: FunctionRV, x: Decimal, h: Decimal, *, prec: int = 100) -> Decimal:
         r"""
         Computes the central difference of ``func``:
         
@@ -69,24 +78,30 @@ class FiniteDifference:
         
             {\deta}_{h}[f](x) = f(x + \frac{h}{2}) - f(x - \frac{h}{2})
             
+        :param func:
         :param x:
         :param h:
+        :param prec:
         :return: The central difference of ``func`` at ``x``
         """
-        return func(x + h / 2) - func(x - h / 2)
+        with decimal.localcontext() as ctx:
+            ctx.prec = 2 * prec
+
+            return func(x + h / 2) - func(x - h / 2)
 
     @classmethod
-    def fdifferences(cls, func: FunctionRV, x: Decimal, h: Decimal) -> FDifferences:
+    def fdifferences(cls, func: FunctionRV, x: Decimal, h: Decimal, *, prec: int = 100) -> FDifferences:
         r"""
         :param func:
         :param x:
         :param h:
+        :param prec:
         :return:
         """
         return cls.FDifferences(
-            cls.forward(func, x, h),
-            cls.backward(func, x, h),
-            cls.central(func, x, h)
+            cls.forward(func, x, h, prec=prec),
+            cls.backward(func, x, h, prec=prec),
+            cls.central(func, x, h, prec=prec)
         )
 
 
@@ -121,23 +136,13 @@ class DifferenceQuotient:
         with decimal.localcontext() as ctx:
             ctx.prec = prec + 2
 
-            p = 1
-            left, central, right = Decimal(0), Decimal(0), Decimal(0)
-            while p <= prec:
-                h = Decimal(f"1E-{p}")
+            h = Decimal(f"1E-{prec}")
 
-                left = FiniteDifference.backward(self.func, x, h) / h
-                central = FiniteDifference.central(self.func, x, h) / h
-                right = FiniteDifference.forward(self.func, x, h) / h
+            left = FiniteDifference.backward(self.func, x, h) / h
+            central = FiniteDifference.central(self.func, x, h) / h
+            right = FiniteDifference.forward(self.func, x, h) / h
 
-                p *= 2
-
-            precision = Decimal(f"1E-{prec}")
-            return self.NDeriv(
-                left.quantize(precision),
-                central.quantize(precision),
-                right.quantize(precision)
-            )
+            return self.NDeriv(left, central, right)
 
     def derivative(self, *, prec: int = 100) -> typing.Callable[[Decimal], NDeriv]:
         r"""
