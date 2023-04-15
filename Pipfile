@@ -8,6 +8,9 @@ name = "pypi"
 [dev-packages]
 build = "*"
 twine = "*"
+pytest = "*"
+vermin = "*"
+pylint = "*"
 
 [requires]
 python_version = "3.11"
