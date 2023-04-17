@@ -126,25 +126,35 @@ class DifferenceQuotient:
     def __init__(self, func: FunctionRV):
         self.func = func
 
-    def nderiv(self, x: Decimal, *, prec: int = 100) -> NDeriv:
+    def nderiv(self, x: Decimal, fdiff: str = "central", *, prec: int = 100) -> Decimal:
         r"""
         :param fdiff:
         :param x:
+        :param fdiff:
         :param prec:
         :return:
         """
+        fdiff_methods = ("left", "central", "right")
+        
         with decimal.localcontext() as ctx:
             ctx.prec = prec + 2
 
             h = Decimal(f"1E-{prec}")
 
-            left = FiniteDifference.backward(self.func, x, h) / h
-            central = FiniteDifference.central(self.func, x, h) / h
-            right = FiniteDifference.forward(self.func, x, h) / h
+            if fdiff == "left":
+                return FiniteDifference.backward(self.func, x, h) / h
+            elif fdiff == "central":
+                return FiniteDifference.central(self.func, x, h) / h
+            elif fdiff == "right":
+                return FiniteDifference.forward(self.func, x, h) / h
+            else:
+                raise ValueError(
+                    f"finite difference method {fdiff} not in {fdiff_methods}"
+                )
 
-            return self.NDeriv(left, central, right)
-
-    def derivative(self, *, prec: int = 100) -> typing.Callable[[Decimal], NDeriv]:
+    def derivative(
+        self, fdiff: str = "central", *, prec: int = 100
+    ) -> typing.Callable[[Decimal], NDeriv]:
         r"""
         :param fdiff:
         :param prec:
@@ -155,6 +165,6 @@ class DifferenceQuotient:
             :param x:
             :return:
             """
-            return self.nderiv(x, prec=prec)
+            return self.nderiv(x, fdiff, prec=prec)
 
         return _derivative

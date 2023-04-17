@@ -28,7 +28,7 @@ def test_finitedifference(
 @pytest.mark.parametrize(
     ("func", "x", "nderiv"),
     [
-        (lambda _: 0, 0, DQuot.NDeriv(0, 0, 0)),
+        (lambda _: 0, 0, 0),
     ]
 )
 def test_differencequotient(
